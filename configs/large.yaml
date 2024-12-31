@@ -1,5 +1,5 @@
 defaults:
-  - model: default
+  - model: default # none of the other configs match the models.safetensors it seems
   - dataset@train_dataset: partnet 
   - dataset@val_dataset: partnet_val
   - loss: default

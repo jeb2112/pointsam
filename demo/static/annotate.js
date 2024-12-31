@@ -126,9 +126,9 @@ async function onMouseClick(event) {
   // Show prompt points
   for (var i = 0; i < prompts.length; i++) {
     if (labels[i] > 0) {
-      colors.setXYZ(prompts[i], 1, 0, 0);
-    } else {
       colors.setXYZ(prompts[i], 0, 1, 0);
+    } else {
+      colors.setXYZ(prompts[i], 1, 0, 0);
     }
   }
   colors.needsUpdate = true;

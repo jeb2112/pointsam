@@ -33,3 +33,5 @@ model_ts*.txt
 .vscode
 _darcs
 /pretrained
+
+.codegpt

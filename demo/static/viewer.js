@@ -61,7 +61,8 @@ function initialize_viewer() {
     1, // Near
     1000 // Far
   );
-  camera.position.z = 5;
+  camera.position.z = 500;
+  // camera.position.z = 5;
 
   // Add renderer
   renderer = new THREE.WebGLRenderer({
@@ -87,6 +88,8 @@ async function loadPointCloud(ply_path) {
   var material = new THREE.PointsMaterial({
     size: 10,
     vertexColors: true,
+    opacity: 1.0,
+    transparent: true
   });
 
   geometry = new THREE.BufferGeometry();
