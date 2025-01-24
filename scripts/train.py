@@ -15,39 +15,32 @@ from datasets import DatasetDict, load_dataset, load_from_disk
 from omegaconf import OmegaConf
 from torch.utils.data import ConcatDataset, DataLoader
 
-#probably a wandb key
-# c2031d939bbc719b4153f65089a7cc712b569141
 import wandb
 from pc_sam.datasets.transforms import Compose
 from pc_sam.model.loss import compute_iou
 from pc_sam.model.pc_sam import PointCloudSAM
 from pc_sam.utils.torch_utils import replace_with_fused_layernorm, worker_init_fn
 
-from pc_sam.datasets.pointSAMDataset import pointSAMDataset
 
 def build_dataset(cfg):
     if os.path.exists(cfg.dataset.path):
         keep_in_memory = cfg.get("keep_in_memory", False)
-        # dataset = load_from_disk(cfg.dataset.path, keep_in_memory=keep_in_memory)
-        datasetfiles = load_file_paths(cfg.dataset.path)
-        # split = cfg.dataset.get("split", "train")
-        # dataset = dataset[split]
+        dataset = load_from_disk(cfg.dataset.path, keep_in_memory=keep_in_memory)
+        split = cfg.dataset.get("split", "train")
+        dataset = dataset[split]
     else:
-        datasetfiles = load_dataset(**cfg.dataset)
+        dataset = load_dataset(**cfg.dataset)
 
-    if False: # these will be done on the fly in __get_item()
-        dataset = dataset.rename_columns(
-            {"xyz": "coords", "rgb": "features", "mask": "gt_masks"}
-        )
-        dataset = dataset.select_columns(["coords", "features", "gt_masks"])
+    dataset = dataset.rename_columns(
+        {"xyz": "coords", "rgb": "features", "mask": "gt_masks"}
+    )
+    dataset = dataset.select_columns(["coords", "features", "gt_masks"])
 
-        dataset.set_transform(Compose(cfg.transforms))
+    dataset.set_transform(Compose(cfg.transforms))
 
     if "repeats" in cfg:
         from torch.utils.data import Subset  # fmt: skip
-        datasetfiles = Subset(datasetfiles, list(range(len(datasetfiles))) * cfg.repeats)
-
-    dataset = pointSAMDataset(cfg.dataset.path,datasetfiles,transform=Compose(cfg.transforms))
+        dataset = Subset(dataset, list(range(len(dataset))) * cfg.repeats)
 
     return dataset
 
@@ -61,43 +54,6 @@ def build_datasets(cfg):
     else:
         return build_dataset(cfg)
 
-# according to psam_trainer_preprocess.py
-def load_file_paths(training_dir):
-    img_dir = os.path.join(training_dir,'images')
-    lbl_dir = os.path.join(training_dir,'labels')
-
-    img_files = sorted(os.listdir(img_dir))
-    lbl_files = sorted(os.listdir(lbl_dir))
-    data = []
-
-    for img,lbl in zip(img_files,lbl_files):
-        image_path = os.path.join(img_dir,img)
-        label_path = os.path.join(lbl_dir,lbl)
-        # Append the image and label pair
-        data.append({"image": image_path, "label": label_path})
-
-    return data
-
-# according to brats default naming and dir structure
-def load_file_paths_brats(training_dir):
-    case_files = sorted(os.listdir(training_dir))
-    data = []
-
-    for c in case_files:
-        # Full path to the image file. for now, only 1 image file will be trained
-        data_files = os.listdir(os.path.join(training_dir,c))
-        image_file = list(filter(lambda v:'t2f' in v,data_files))[0]
-        image_path = os.path.join(training_dir,c,image_file)
-        try:
-            label_file = list(filter(lambda v:'seg' in v,data_files))[0]
-            label_path = os.path.join(training_dir,c,label_file)
-        except IndexError as e:
-            label_path = None
-
-        # Append the image and label pair
-        data.append({"image": image_path, "label": label_path})
-
-    return data
 
 # NOTE: We separately instantiate each component for fine-grained control.
 def main():
@@ -105,15 +61,13 @@ def main():
     parser.add_argument(
         "--config", type=str, default="large", help="path to config file"
     )
-    parser.add_argument("--config_dir", type=str, default="./configs")
+    parser.add_argument("--config_dir", type=str, default="configs")
     args, unknown_args = parser.parse_known_args()
 
     # ---------------------------------------------------------------------------- #
     # Load configuration
     # ---------------------------------------------------------------------------- #
     with hydra.initialize(args.config_dir, version_base=None):
-        # doesn't take config_dir as an arg? appears to assume hard-coded path configs dir is 
-        # in the cwd() of this script?
         cfg = hydra.compose(config_name=args.config, overrides=unknown_args)
         OmegaConf.resolve(cfg)
         # print(OmegaConf.to_yaml(cfg))
@@ -225,7 +179,7 @@ def main():
 
     if cfg.log_with:
         accelerator.init_trackers(
-            project_name=cfg.get("project_name", "psam_brats"),
+            project_name=cfg.get("project_name", "pointcloud-sam"),
             config=hparams,
             init_kwargs={"wandb": {"name": cfg.run_name}},
         )

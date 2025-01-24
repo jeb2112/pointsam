@@ -1,23 +1,23 @@
 defaults:
   - model: default # none of the other configs match the models.safetensors it seems
-  - dataset@train_dataset: partnet 
-  - dataset@val_dataset: partnet_val
+  - dataset@train_dataset: brats2024_train 
+  - dataset@val_dataset: brats2024_val
   - loss: default
 
 # Global variables
 num_samples: 10000
 
-# For 24GB GPU
+# For 4GB GPU
 train_dataloader:
-  batch_size: 2
-  num_workers: 8
+  batch_size: 1
+  num_workers: 1
   shuffle: True
   drop_last: True
 
 val_freq: 5
 val_dataloader:
-  batch_size: 16
-  num_workers: 16
+  batch_size: 1
+  num_workers: 1
   shuffle: False
   drop_last: False
 
@@ -34,11 +34,11 @@ scheduler:
   warmup_factor: 0.001
   gamma: 0.1
 
-pretrained_ckpt_path: ./pretrained/uni3d-l/model.pt
+pretrained_ckpt_path: /media/jbishop/WD4/brainmets/sam_models/uni3d-l/model.pt
 max_epochs: 10000
 max_steps: 5000000
 
 # Logging
-run_name: default_partnet+scannet_block
+run_name: default_brats
 project_dir: "./logs/${run_name}"
 log_with: wandb

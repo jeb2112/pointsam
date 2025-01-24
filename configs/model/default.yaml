@@ -5,8 +5,10 @@ pc_encoder:
     _target_: pc_sam.model.pc_encoder.PatchEmbed
     in_channels: 6
     out_channels: 512  # compatible with unit3d-l
-    num_patches: 1024
-    patch_size: 256
+    # num_patches: 1024
+    # patch_size: 256
+    num_patches: 128
+    patch_size: 32
   transformer:
     _target_: timm.create_model
     model_name: eva02_large_patch14_448
