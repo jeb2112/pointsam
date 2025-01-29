@@ -8,6 +8,7 @@ from torkit3d.nn.functional import batch_index_select
 from torkit3d.ops.sample_farthest_points import sample_farthest_points
 from torkit3d.ops.chamfer_distance import chamfer_distance
 
+import pdb 
 
 def fps(points: torch.Tensor, num_samples: int):
     """A wrapper of farthest point sampling (FPS).
@@ -439,6 +440,7 @@ def sample_fixed_points(
                     prompt_points.append(nprompt_coord)
                     prompt_labels.append(nprompt_label)
 
+    breakpoint()
     prompt_points = torch.stack(prompt_points)
     prompt_labels = torch.stack(prompt_labels)
     return prompt_points, prompt_labels
