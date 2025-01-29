@@ -184,8 +184,11 @@ class pointSAMDataset(Dataset):
 
         # crop to the locality of the control point prompt. this is needed
         # for now to limit point cloud size, rather than random sampling, for gpu memory
+        # minimum crop must check for some background pixels otherwise the auto-prompt point
+        # gen will throw an error
+        # currently the crop3d does not check for an out of bounds on any dimension. 
         if crop:
-            img,mask,input_points,input_labels = self.crop3d(img,mask,input_points,input_labels,cropdim=(4,4,4))
+            img,mask,input_points,input_labels = self.crop3d(img,mask,input_points,input_labels,cropdim=(20,20,20))
 
         # form point cloud
         # 

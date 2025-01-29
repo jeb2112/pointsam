@@ -440,7 +440,6 @@ def sample_fixed_points(
                     prompt_points.append(nprompt_coord)
                     prompt_labels.append(nprompt_label)
 
-    breakpoint()
     prompt_points = torch.stack(prompt_points)
     prompt_labels = torch.stack(prompt_labels)
     return prompt_points, prompt_labels
