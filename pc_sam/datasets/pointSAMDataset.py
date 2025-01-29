@@ -196,7 +196,10 @@ class pointSAMDataset(Dataset):
         # coords generally have to be floats as would be the case in arbitrary 3d parts clouds
         # somehow need specifically float32 for torch, not python float=64? 
         xyzcoords = np.array(points).T.astype(np.float32)
-        xyzcoords = normalize_points(xyzcoords)
+        try:
+            xyzcoords = normalize_points(xyzcoords)
+        except ValueError as e:
+            breakpoint()
         # form rgb
         rgbfeatures = img[points]
         rgbfeatures /= np.max(rgbfeatures)
