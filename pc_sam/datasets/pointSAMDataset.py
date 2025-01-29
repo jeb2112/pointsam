@@ -193,13 +193,11 @@ class pointSAMDataset(Dataset):
         # form point cloud
         # 
         points = np.where(np.max(img,axis=3))
+        assert len(points[0]), 'no points detected'
         # coords generally have to be floats as would be the case in arbitrary 3d parts clouds
         # somehow need specifically float32 for torch, not python float=64? 
         xyzcoords = np.array(points).T.astype(np.float32)
-        try:
-            xyzcoords = normalize_points(xyzcoords)
-        except ValueError as e:
-            breakpoint()
+        xyzcoords = normalize_points(xyzcoords)
         # form rgb
         rgbfeatures = img[points]
         rgbfeatures /= np.max(rgbfeatures)
