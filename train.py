@@ -3,6 +3,7 @@ import os
 from collections import defaultdict
 from contextlib import nullcontext
 from pathlib import Path
+import platform
 
 import hydra
 import numpy as np
@@ -118,6 +119,11 @@ def main():
         OmegaConf.resolve(cfg)
         # print(OmegaConf.to_yaml(cfg))
 
+    # any mods needed for aws versus local
+    pretrained_ckpt_path = cfg.pretrained_ckpt_path
+    if 'amzn' in platform.release():
+        pretrained_ckpt_path = '/home/ec2-user/sam_models/uni3d-l/model.pt'
+
     # Prepare (flat) hyperparameters for logging
     hparams = {
         "lr": cfg.lr,
@@ -144,9 +150,9 @@ def main():
     # ---------------------------------------------------------------------------- #
     # Initialize with pre-trained weights if provided
     # ---------------------------------------------------------------------------- #
-    if cfg.pretrained_ckpt_path:
-        print("Loading pretrained weight from", cfg.pretrained_ckpt_path)
-        pretrained = torch.load(cfg.pretrained_ckpt_path)
+    if pretrained_ckpt_path:
+        print("Loading pretrained weight from", pretrained_ckpt_path)
+        pretrained = torch.load(pretrained_ckpt_path)
         # Hardcoded for Uni3D
         state_dict = {}
         for name in pretrained["module"].keys():
