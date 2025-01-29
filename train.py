@@ -120,9 +120,10 @@ def main():
         # print(OmegaConf.to_yaml(cfg))
 
     # any mods needed for aws versus local
-    pretrained_ckpt_path = cfg.pretrained_ckpt_path
     if 'amzn' in platform.release():
-        pretrained_ckpt_path = '/home/ec2-user/sam_models/uni3d-l/model.pt'
+        cfg.pretrained_ckpt_path = '/home/ec2-user/psam_training/uni3d-l/model.pt'
+        cfg['train_dataset']['dataset']['path'] = '/home/ec2-user/psam_training/'
+        cfg['val_dataset']['dataset']['path'] = '/home/ec2-user/psam_validation/'
 
     # Prepare (flat) hyperparameters for logging
     hparams = {
@@ -150,9 +151,9 @@ def main():
     # ---------------------------------------------------------------------------- #
     # Initialize with pre-trained weights if provided
     # ---------------------------------------------------------------------------- #
-    if pretrained_ckpt_path:
-        print("Loading pretrained weight from", pretrained_ckpt_path)
-        pretrained = torch.load(pretrained_ckpt_path)
+    if cfg.pretrained_ckpt_path:
+        print("Loading pretrained weight from", cfg.pretrained_ckpt_path)
+        pretrained = torch.load(cfg.pretrained_ckpt_path)
         # Hardcoded for Uni3D
         state_dict = {}
         for name in pretrained["module"].keys():
