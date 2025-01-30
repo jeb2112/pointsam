@@ -102,8 +102,8 @@ class pointSAMDataset(Dataset):
             try:
                 inputs = self._getitem_ctrlpts(input_image1, ground_truth_mask=label_image,ground_truth_pts=ground_truth_pts)  
             except ValueError:
-                with open(os.path.expanduser('~'),'dump.pkl','wb') as fp:
-                    pickle.dump((input_image1,label_image,idx))
+                with open(os.path.join(os.path.expanduser('~'),'dump.pkl'),'wb') as fp:
+                    pickle.dump((input_image1,label_image,idx),fp)
 
         # debug plotting
         if False:
