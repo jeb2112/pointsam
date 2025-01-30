@@ -4,6 +4,7 @@ from skimage.io import imread,imsave
 from skimage.transform import resize
 import nibabel as nb
 import glob
+import copy
 import os
 import pickle
 import random
@@ -102,8 +103,10 @@ class pointSAMDataset(Dataset):
             try:
                 inputs = self._getitem_ctrlpts(input_image1, ground_truth_mask=label_image,ground_truth_pts=ground_truth_pts)  
             except ValueError:
-                with open(os.path.join(os.path.expanduser('~'),'dump.pkl'),'wb') as fp:
+                with open(os.path.join(os.path.expanduser('~'),'dump'+str(idx)+'.pkl'),'wb') as fp:
                     pickle.dump((input_image1,label_image,idx),fp)
+                self.writenifti(np.max(input_image1,axis=3),os.path.join(os.path.expanduser('~'),'img'+str(idx)+'.nii'))
+                self.writenifti(label_image,os.path.join(os.path.expanduser('~'),'lbl'+str(idx)+'.nii'),type='uint8')
 
         # debug plotting
         if False:
@@ -287,6 +290,17 @@ class pointSAMDataset(Dataset):
         affine = img_nb_t1.affine
         return img_arr_t1,affine
     
+    # write a single nifti file. use uint8 for masks 
+    def writenifti(self,img_arr,filename,header=None,norm=False,type='float64',affine=None):
+        img_arr_cp = copy.deepcopy(img_arr)
+        if norm:
+            img_arr_cp = (img_arr_cp -np.min(img_arr_cp)) / (np.max(img_arr_cp)-np.min(img_arr_cp)) * norm
+        # using nibabel nifti coordinates
+        img_nb = nb.Nifti1Image(np.transpose(img_arr_cp.astype(type),(2,1,0)),affine,header=header)
+        nb.save(img_nb,filename)
+        if True:
+            os.system('gzip --force "{}"'.format(filename))
+
 
     # select a single lesion from a BraTS segmentation
     # selection will start from cc3d idx #1, unless idx arg is provided > 1
