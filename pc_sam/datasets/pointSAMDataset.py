@@ -337,22 +337,32 @@ class pointSAMDataset(Dataset):
             return None
         
     # default cropdim for approx 10000 points
-    def crop3d(self,img_arr,mask_arr,pts,lbls,cropdim=(10,10,10)):
+    def crop3d(self,img_arr,mask_arr,pts,lbls,ndim=[20,20,20],pdim=[20,20,20]):
         # centroid of foreground prompt points
         # this might cut off some prompt points, fg or bg, needs to be improved.
+        dim = img_arr.shape
+        for i in range(3):
+            if cpt[i]-ndim[i] < 0:
+                ndim[i] = cpt[i]
+                pdim[i] += ndim[i]-cpt[i]
+            elif cpt[i]+pdim[i] >= dim[i]:
+                pdim[i] = dim[i]-cpt[i]-1
+                ndim[i] += (pdim[i] - (dim[i]-cpt[i]-1))
+
         fg_pts = np.array([p for p,l in zip(pts,lbls) if l==1])
         cpt = np.round(np.mean(fg_pts,axis=0)).astype(int)
-        crop_img_arr = img_arr[cpt[0]-cropdim[0]:cpt[0]+cropdim[0],
-                          cpt[1]-cropdim[1]:cpt[1]+cropdim[1],
-                          cpt[2]-cropdim[2]:cpt[2]+cropdim[2]]
-        crop_mask_arr = mask_arr[cpt[0]-cropdim[0]:cpt[0]+cropdim[0],
-                          cpt[1]-cropdim[1]:cpt[1]+cropdim[1],
-                          cpt[2]-cropdim[2]:cpt[2]+cropdim[2]]
+        crop_img_arr = img_arr[cpt[0]-ndim[0]:cpt[0]+pdim[0],
+                          cpt[1]-ndim[1]:cpt[1]+pdim[1],
+                          cpt[2]-ndim[2]:cpt[2]+pdim[2]]
+        crop_mask_arr = mask_arr[cpt[0]-ndim[0]:cpt[0]+pdim[0],
+                          cpt[1]-ndim[1]:cpt[1]+pdim[1],
+                          cpt[2]-ndim[2]:cpt[2]+pdim[2]]
         # adjust the prompts accordingly
         crop_pts = []
         crop_lbls = []
-        for pt,lbl in zip(pts,lbls):
-            if all(pt-cpt) >= 0:
-                crop_pts.append(pt-cpt+cropdim)
-                crop_lbls.append(lbl)
+        if False: # not using these for now
+            for pt,lbl in zip(pts,lbls):
+                if all(pt-cpt) >= 0:
+                    crop_pts.append(pt-cpt+cropdim)
+                    crop_lbls.append(lbl)
         return crop_img_arr,crop_mask_arr,crop_pts,crop_lbls
