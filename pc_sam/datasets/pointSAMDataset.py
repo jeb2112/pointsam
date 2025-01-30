@@ -5,6 +5,7 @@ from skimage.transform import resize
 import nibabel as nb
 import glob
 import os
+import pickle
 import random
 import json
 import matplotlib.pyplot as plt
@@ -98,7 +99,11 @@ class pointSAMDataset(Dataset):
             except IndexError as e:
                 # no ground truth control points use auto-generated
                 ground_truth_pts = None
-            inputs = self._getitem_ctrlpts(input_image1, ground_truth_mask=label_image,ground_truth_pts=ground_truth_pts)  
+            try:
+                inputs = self._getitem_ctrlpts(input_image1, ground_truth_mask=label_image,ground_truth_pts=ground_truth_pts)  
+            except ValueError:
+                with open(os.path.expanduser('~'),'dump.pkl','wb') as fp:
+                    pickle.dump((input_image1,label_image,idx))
 
         # debug plotting
         if False:
@@ -193,6 +198,8 @@ class pointSAMDataset(Dataset):
         # form point cloud
         # 
         points = np.where(np.max(img,axis=3))
+        if len(points[0]) == 0:
+            raise ValueError
         assert len(points[0]), 'no points detected'
         # coords generally have to be floats as would be the case in arbitrary 3d parts clouds
         # somehow need specifically float32 for torch, not python float=64? 
