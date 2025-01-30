@@ -6,6 +6,7 @@ import nibabel as nb
 import glob
 import copy
 import os
+import time
 import pickle
 import random
 import json
@@ -56,10 +57,13 @@ class pointSAMDataset(Dataset):
         # images are duplicated for multiple lesions, need to avoid re-loading from disk
         # but if images have been shuffled this isn't possible
         idxdir,ifile = os.path.split(self.dataset[idx]['image'])
-        input_image,affine = self.loadnifti(ifile,idxdir)
-
         lbldir,lfile = os.path.split(self.dataset[idx]['label'])
+        time1 = time.time()
+        input_image,affine = self.loadnifti(ifile,idxdir)
         label_image,affine = self.loadnifti(lfile,lbldir)
+        etime1 = time.time() - time1
+        print('file read time = {:.2f}'.format(etime1))
+
         label_image = label_image.astype(bool)
 
         # some general processing could done here explicitly since no longer using huggingface processor
