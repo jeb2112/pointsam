@@ -196,7 +196,7 @@ class pointSAMDataset(Dataset):
         # gen will throw an error
         # currently the crop3d does not check for an out of bounds on any dimension. 
         if crop:
-            img,mask,input_points,input_labels = self.crop3d(img,mask,input_points,input_labels,cropdim=(20,20,20))
+            img,mask,input_points,input_labels = self.crop3d(img,mask,input_points,input_labels)
 
         # form point cloud
         # 
