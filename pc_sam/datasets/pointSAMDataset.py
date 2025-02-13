@@ -62,7 +62,8 @@ class pointSAMDataset(Dataset):
         input_image,affine = self.loadnifti(ifile,idxdir)
         label_image,affine = self.loadnifti(lfile,lbldir)
         etime1 = time.time() - time1
-        print('file read time = {:.2f}'.format(etime1))
+        if False:
+            print('file read time = {:.2f}'.format(etime1))
 
         label_image = label_image.astype(bool)
 

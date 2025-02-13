@@ -51,6 +51,58 @@ def load_dataset(cpath,type='t1c'):
 
     return img_arr_t1c,img_arr_seg
 
+
+# control points option. single point positive point, centroid of a mask, or multiple labelled points 
+def generate_input_points(mask=None,pts=None,dynamic_distance=True,erode=True):
+    input_points = []
+    if mask is not None:
+        slice,row,col = map(int,np.mean(np.where(mask),axis=1))
+        input_points.append([slice,row,col]) 
+        input_points = np.array(input_points)
+        input_labels = np.array([1])
+    elif pts is not None:
+        # add dummy dimension for batch
+        input_points = np.array([(x,y) for x,y in zip(pts['x'],pts['y'])])
+        # dummy batch dimension? or samprocessor adds automatically
+        # input_labels = np.expand_dims(np.array(pts['fg']),0)
+        input_labels = np.array(pts['fg'])
+
+    return  input_points,input_labels  
+
+
+# default cropdim for approx 10000 points
+def crop3d(img_arr,mask_arr,pts,lbls,ndim=[20,20,20],pdim=[20,20,20]):
+    # centroid of foreground prompt points
+    # this might cut off some prompt points, fg or bg, needs to be improved.
+
+    fg_pts = np.array([p for p,l in zip(pts,lbls) if l==1])
+    cpt = np.round(np.mean(fg_pts,axis=0)).astype(int)
+
+    dim = img_arr.shape
+    for i in range(3):
+        if cpt[i]-ndim[i] < 0:
+            ndim[i] = cpt[i]
+            pdim[i] += ndim[i]-cpt[i]
+        elif cpt[i]+pdim[i] >= dim[i]:
+            pdim[i] = dim[i]-cpt[i]-1
+            ndim[i] += (pdim[i] - (dim[i]-cpt[i]-1))
+
+    crop_img_arr = img_arr[cpt[0]-ndim[0]:cpt[0]+pdim[0],
+                        cpt[1]-ndim[1]:cpt[1]+pdim[1],
+                        cpt[2]-ndim[2]:cpt[2]+pdim[2]]
+    crop_mask_arr = mask_arr[cpt[0]-ndim[0]:cpt[0]+pdim[0],
+                        cpt[1]-ndim[1]:cpt[1]+pdim[1],
+                        cpt[2]-ndim[2]:cpt[2]+pdim[2]]
+    # adjust the prompts accordingly
+    crop_pts = []
+    crop_lbls = []
+    if False: # not using these for now
+        for pt,lbl in zip(pts,lbls):
+            if all(pt-cpt) >= 0:
+                crop_pts.append(pt-cpt+cropdim)
+                crop_lbls.append(lbl)
+    return crop_img_arr,crop_mask_arr,crop_pts,crop_lbls
+
 # main
 
 if os.name == 'posix':
@@ -95,6 +147,8 @@ for tv in tv_set.keys():
     os.makedirs(os.path.join(datadir,tv,'prompts'),exist_ok=True)
 
     img_idx = 0
+    skip_idx = 0
+
     for case_idx,C in enumerate(tv_set[tv]['casedirs']):
         case = tv_set[tv]['cases'][case_idx]
         if False: #debugging
@@ -103,20 +157,21 @@ for tv in tv_set.keys():
         print('case = {}'.format(case))
         cpath = os.path.join(datadir,'training',C)
         opath = os.path.join(datadir,tv)
-        img_arr_t1c,img_arr_seg = load_dataset(cpath,type=img_type)
+        img_arr,img_arr_seg = load_dataset(cpath,type=img_type)
         # converting to uint8
-        img_arr_t1c = (img_arr_t1c / np.max(img_arr_t1c) * 255).astype('uint8')
+        img_arr = (img_arr / np.max(img_arr) * 255).astype('uint8')
 
-        if np.max(img_arr_t1c) == 0:
+        if np.max(img_arr) == 0:
             print('Invalid image, skipping...')
             continue
 
-        if np.shape(img_arr_t1c)[1] != np.shape(img_arr_t1c)[2]:
+        if np.shape(img_arr)[1] != np.shape(img_arr)[2]:
             print('Rectangular matrix in case {}, skipping.'.format(C))
             continue
         
         # take entire tumor mask for now
         mask = ((img_arr_seg > 0)).astype('uint8')*255
+
         CC_mask = cc3d.connected_components(mask,connectivity=6)
         nCC_mask = len(np.unique(CC_mask))
         # select a component. occasionally, the mask of a single large and 
@@ -126,18 +181,38 @@ for tv in tv_set.keys():
             lset = list(range(1,nCC_mask+1))
             try:
                 for isel,sel in enumerate(lset):
-                    print('lesion #{}'.format(sel))
+                    print('lesion #{}'.format(sel),end='')
                     mask = (CC_mask == sel).astype('uint8') * 255
-                    if len(np.where(mask==255)[0]) > 9:
+                    npixel = len(np.where(mask==255)[0])
+                    if npixel > 99 and npixel < 64000:
+
+                        # precrop to the locality of the control point prompt. this the approach
+                        # to limit point cloud size for gpu memory, since random down-sampling is not 
+                        # appropriate in this context. 
+                        # minimum crop must check for some background pixels otherwise the auto-prompt point
+                        # gen will throw an error
+                        # can also be done in realtime with __getitem__() and for augmenting, but file reads are taking too 
+                        # much time so start with this.
+                        if True:
+                            # auto-gen prompt points is also available from p'sam
+                            input_points, input_labels = generate_input_points(  
+                                pts=None,
+                                mask=mask
+                            )  
+                            img_arr_c,mask_c,input_points,input_labels = crop3d(img_arr,mask,input_points,input_labels)
 
                         ofile = 'img_' + str(img_idx).zfill(5) + '_case_' + case + '.nii'
-                        writenifti(img_arr_t1c,os.path.join(opath,'images',ofile))
+                        writenifti(img_arr_c,os.path.join(opath,'images',ofile))
 
                         ofile = 'lbl_' + str(img_idx).zfill(5) + '_case_' + case + '.nii' 
                         mask = (CC_mask == sel).astype('uint8') * 255
-                        writenifti(mask,os.path.join(opath,'labels',ofile))
+                        writenifti(mask_c,os.path.join(opath,'labels',ofile))
 
                         img_idx += 1
+                        print('')
+                    else:
+                        skip_idx += 1
+                        print(' skipped')
 
             except ValueError:
                 continue
@@ -147,3 +222,4 @@ for tv in tv_set.keys():
             continue
 
 
+    print('{} lesions, {} skipped'.format(img_idx,skip_idx))
