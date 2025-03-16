@@ -1,0 +1,34 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "app.py",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                // "--pointcloud","/home/src/radnec/scripts/BraTS-MET-00012-000_0003.nii.gz",
+                "--pointcloud","rhino.ply",
+                // "--pointcloud","testlarge",
+            ],
+            "program": "${workspaceFolder}/demo/app.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+        {
+            "name": "train",
+            "type": "debugpy",
+            "request": "launch",
+            "args": [
+                // "--pointcloud","/home/src/radnec/scripts/BraTS-MET-00012-000_0003.nii.gz",
+                // "--pointcloud","rhino.ply",
+            ],
+            "program": "${workspaceFolder}/train.py",
+            "console": "integratedTerminal",
+            "justMyCode": false
+        },
+
+    ]
+}
